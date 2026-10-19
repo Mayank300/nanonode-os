@@ -1,0 +1,38 @@
+# .github/workflows/build-iso.yml
+name: Build NanoNode Server OS ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      github_user:
+        description: "GitHub username whose public SSH keys will be baked into root"
+        required: true
+        default: "mayankratre"
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-os:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install toolchain & ISO utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential musl-tools bc bison flex \
+            libelf-dev libssl-dev cpio isolinux syslinux-common xorriso curl
+
+      - name: Build Custom OS Image
+        run: |
+          TARGET_USER="${{ github.event.inputs.github_user || github.actor }}"
+          chmod +x build.sh
+          ./build.sh "$TARGET_USER"
+
+      - name: Upload Bootable ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanonode-os-iso
+          path: nanonode-*.iso
